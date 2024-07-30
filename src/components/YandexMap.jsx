@@ -1,109 +1,75 @@
-import React, { useState } from 'react';
-import { YMaps, Map, RouteEditor, Placemark, Polygon } from 'react-yandex-maps';
+import React, { useEffect, useRef, useState } from 'react';
+import { YMaps, Map, RoutePanel, ZoomControl, Polygon } from 'react-yandex-maps';
+import axios from 'axios';
+
+const DELIVERY_API_KEY = 'a3c06cbf-017a-41e0-95cc-be6de4a66ccc';
 
 const YandexMap = () => {
-  const [route, setRoute] = useState([]);
+  const mapRef = useRef(null);
+  const [deliveryZones, setDeliveryZones] = useState([]);
 
-  const mapOptions = {
-    center: [55.751574, 37.573856],
-    zoom: 10,
-  };
+  useEffect(() => {
+    const fetchDeliveryZones = async () => {
+      try {
+        const response = await axios.get('/delivery-zones.json');
+        setDeliveryZones(response.data);
+      } catch (error) {
+        console.error('Error loading delivery zones:', error);
+      }
+    };
 
-  const handleRouteChange = (newRoute) => {
-    setRoute(newRoute);
-  };
+    fetchDeliveryZones();
+  }, []);
 
-  const zones = [
-    {
-      geometry: {
-        coordinates: [
-          [
-            [55.795, 37.565],
-            [55.795, 37.595],
-            [55.775, 37.610],
-            [55.755, 37.595],
-            [55.740, 37.580],
-            [55.755, 37.560],
-            [55.775, 37.560],
-          ],
-        ],
-      },
-      properties: {
-        hintContent: 'Зона 1',
-        balloonContent: 'Северная зона',
-      },
-      options: {
-        fillColor: `rgba(255, 99, 71, 0.4)`,
-        strokeColor: `#FF6347`,
-      },
-    },
-    {
-      geometry: {
-        coordinates: [
-          [
-            [55.735, 37.610],
-            [55.735, 37.650],
-            [55.715, 37.670],
-            [55.695, 37.650],
-            [55.695, 37.610],
-            [55.715, 37.590],
-            [55.735, 37.590],
-          ],
-        ],
-      },
-      properties: {
-        hintContent: 'Зона 2',
-        balloonContent: 'Центральная зона',
-      },
-      options: {
-        fillColor: `rgba(100, 149, 237, 0.4)`,
-        strokeColor: `#4169E1`,
-      },
-    },
-    {
-      geometry: {
-        coordinates: [
-          [
-            [55.715, 37.550],
-            [55.715, 37.590],
-            [55.695, 37.610],
-            [55.675, 37.590],
-            [55.675, 37.550],
-            [55.695, 37.530],
-            [55.715, 37.530],
-          ],
-        ],
-      },
-      properties: {
-        hintContent: 'Зона 3',
-        balloonContent: 'Южная зона',
-      },
-      options: {
-        fillColor: `rgba(60, 179, 113, 0.4)`,
-        strokeColor: `#3CB371`,
-      },
-    },
-  ];
+  useEffect(() => {
+    if (window.ymaps && deliveryZones.length) {
+      const map = mapRef.current;
+
+      deliveryZones.forEach((zone) => {
+        const polygon = new window.ymaps.Polygon(
+          zone.geometry.coordinates,
+          zone.properties,
+          zone.options
+        );
+
+        map.geoObjects.add(polygon);
+      });
+    }
+  }, [deliveryZones]);
 
   return (
-    <YMaps query={{ apikey: 'a3c06cbf-017a-41e0-95cc-be6de4a66ccc' }}>
-      <Map defaultState={mapOptions} style={{ width: '100%', height: '100vh' }}>
-        <RouteEditor
-          onRouteChange={handleRouteChange}
-          state={{
-            active: true,
-            options: {
-              autoFitToViewport: true,
+    <YMaps query={{ apikey: DELIVERY_API_KEY }}>
+      <Map
+        defaultState={{
+          center: [55.755826, 37.6172999],
+          zoom: 12,
+          controls: [],
+        }}
+        width="100%"
+        height="100%"
+        instanceRef={(map) => (mapRef.current = map)}
+        onLoad={() => console.log('Map loaded')}
+      >
+        <RoutePanel
+          options={{
+            showHeader: false,
+            title: '',
+          }}
+          routePanel={{
+            types: { auto: true },
+          }}
+        />
+        <ZoomControl
+          options={{
+            size: 'small',
+            float: 'none',
+            position: {
+              bottom: 145,
+              right: 10,
             },
           }}
         />
-        {route.length > 0 && (
-          <Placemark
-            geometry={route[route.length - 1].geometry.coordinates}
-            options={{ preset: 'islands#greenIcon' }}
-          />
-        )}
-        {zones.map((zone, index) => (
+        {deliveryZones.map((zone, index) => (
           <Polygon
             key={index}
             geometry={zone.geometry.coordinates}
