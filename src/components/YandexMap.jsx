@@ -11,7 +11,7 @@ const YandexMap = () => {
   useEffect(() => {
     const fetchDeliveryZones = async () => {
       try {
-        const response = await axios.get('/delivery-zones.json');
+        const response = await axios.get('/yandex-maps-demo/delivery-zones.json');
         setDeliveryZones(response.data);
       } catch (error) {
         console.error('Error loading delivery zones:', error);
